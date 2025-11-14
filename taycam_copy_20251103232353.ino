@@ -8,7 +8,7 @@ Servo myservo;
 enum Mode { MANUAL, AUTONOMOUS };
 Mode currentMode = MANUAL;
 
-// --- 2. KHAI BÁO PIN (Theo code L298N) ---
+// --- 2. KHAI BÁO PIN ---
 // PS2
 int error = 0;
 byte type = 0;
@@ -29,14 +29,12 @@ NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 int distance = 100;
 
 // L298N
-//Hai bánh phải
 #define ENA 3 
-#define IN1 4 
-#define IN2 5
-//Hai bánh trái
+#define IN1 7 
+#define IN2 6
 #define ENB 2 
-#define IN3 6 
-#define IN4 7 
+#define IN3 5 
+#define IN4 4 
 #define MAX_SPEED 140
 #define FORWARD_SPEED MAX_SPEED
 #define TURN_SPEED 100
@@ -70,7 +68,7 @@ int distRight = 0;
 void setMotorSpeed(int spdL, int spdR) {
   analogWrite(ENA, abs(spdL));
   analogWrite(ENB, abs(spdR));
-  
+   
   digitalWrite(IN1, (spdL > 0) ? HIGH : LOW);
   digitalWrite(IN2, (spdL > 0) ? LOW : HIGH);
   digitalWrite(IN3, (spdR > 0) ? HIGH : LOW);
@@ -101,15 +99,15 @@ void fire_and_buzz_logic() {
 }
 
 // ===========================================
-//       LOGIC CÁC CHẾ ĐỘ
+//        LOGIC CÁC CHẾ ĐỘ
 // ===========================================
 
 // --- LOGIC CHẾ ĐỘ TỰ HÀNH (KHÔNG THAY ĐỔI) ---
 void autonomous_logic() {
   unsigned long currentMillis = millis();
-  
+   
   switch(currentAutoState) {
-    
+     
     case AUTO_FORWARD:
       // 1. Đi thẳng và liên tục kiểm tra
       moveForward();
@@ -120,7 +118,7 @@ void autonomous_logic() {
         currentAutoState = AUTO_REVERSE; // Chuyển sang bước Lùi
       }
       break;
-      
+       
     case AUTO_REVERSE:
       // 2. Lùi trong 300ms
       moveBackward();
@@ -130,7 +128,7 @@ void autonomous_logic() {
         currentAutoState = AUTO_LOOK_LEFT; // Chuyển sang bước Nhìn Trái
       }
       break;
-      
+       
     case AUTO_LOOK_LEFT:
       // 3. Quay servo sang trái (170 độ) và chờ 0.5s
       myservo.write(170); 
@@ -140,7 +138,7 @@ void autonomous_logic() {
         currentAutoState = AUTO_LOOK_RIGHT; // Chuyển sang bước Nhìn Phải
       }
       break;
-      
+       
     case AUTO_LOOK_RIGHT:
       // 4. Quay servo sang phải (10 độ) và chờ 1s (quay từ 170->10)
       myservo.write(10);
@@ -150,7 +148,7 @@ void autonomous_logic() {
         currentAutoState = AUTO_CENTER_SERVO; // Chuyển sang bước Quyết định
       }
       break;
-      
+       
     case AUTO_CENTER_SERVO:
       // 5. Quay servo về giữa
       myservo.write(90); 
@@ -161,7 +159,7 @@ void autonomous_logic() {
       }
       autoStateMillis = currentMillis;
       break;
-      
+       
     case AUTO_TURN_LEFT:
       // 6. Rẽ trái trong 400ms
       turnLeft();
@@ -170,7 +168,7 @@ void autonomous_logic() {
         currentAutoState = AUTO_FORWARD; // Quay lại bước Đi thẳng
       }
       break;
-      
+       
     case AUTO_TURN_RIGHT:
       // 7. Rẽ phải trong 400ms
       turnRight();
@@ -182,34 +180,37 @@ void autonomous_logic() {
   }
 }
 
-// --- LOGIC CHẾ ĐỘ BẰNG TAY CẦM PS2 ---
+// --- LOGIC CHẾ ĐỘ BẰNG TAY (ĐÃ SỬA: DÙNG PHÍM ĐIỀU HƯỚNG) ---
 void manual_logic() {
-  // 1. Lái xe
-  int leftY = ps2x.Analog(PSS_LY); // 0 (lên) -> 128 (giữa) -> 255 (xuống)
-  int leftX = ps2x.Analog(PSS_LX); // 0 (trái) -> 128 (giữa) -> 255 (phải)
-
-  if (leftX < 100) { // Rẽ trái
-    setMotorSpeed(-TURN_SPEED, TURN_SPEED);
-  } 
-  else if (leftX > 150) { // Rẽ phải
-    setMotorSpeed(TURN_SPEED, -TURN_SPEED);
+  // Sử dụng ps2x.Button() để kiểm tra nút có đang được giữ hay không
+  if (ps2x.Button(PSB_PAD_UP)) {
+    Serial.print("Hướng lên");
+    moveForward();
   }
-  else if (abs(leftY - 128) > MAX_SPEED_OFFSET) {
-    int spd = map(leftY, 0, 255, FORWARD_SPEED, -FORWARD_SPEED);
-    setMotorSpeed(spd, spd);
+  else if (ps2x.Button(PSB_PAD_DOWN)) {
+    Serial.print("Hướng xuông");
+    moveBackward();
   }
-  else {
+  else if (ps2x.Button(PSB_PAD_LEFT)) {
+    Serial.print("Hướng trái");
+    turnLeft();
+  }
+  else if (ps2x.Button(PSB_PAD_RIGHT)) {
+    Serial.print("Hướng phải");
+    turnRight();
+  }
+  else {                                  // Không bấm gì -> Dừng lại
     moveStop();
   }
 }
 
 // ===========================================
-//       SETUP VÀ LOOP
+//        SETUP VÀ LOOP
 // ===========================================
 
 void setup() {
   Serial.begin(115200); 
-  
+   
   // 1. Cài đặt PS2
   pinMode(13, OUTPUT);
   pinMode(pin_laze, OUTPUT);
@@ -220,22 +221,22 @@ void setup() {
   } while(error != 0);
   Serial.println("PS2 Connected.");
   digitalWrite(13, LOW);
-  
+   
   // 2. Cài đặt L298N
   pinMode(ENA, OUTPUT); pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
   pinMode(ENB, OUTPUT); pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
-  
+   
   // 3. Cài đặt Servo
   myservo.attach(servo_pin); 
   myservo.write(pos);
-  
+   
   Serial.println("Robot Ready!");
 }
 
 void loop(){
   // --- 1. ĐỌC TAY CẦM ---
   ps2x.read_gamepad(false, vibrate); 
-  
+   
   // --- 2. XỬ LÝ LAZE/RUNG ---
   fire_and_buzz_logic(); 
   if (ps2x.ButtonPressed(PSB_CROSS) && !is_fire) {
@@ -257,7 +258,7 @@ void loop(){
       Serial.println("MODE: MANUAL");
     }
   }
-  
+   
   // --- 4. THỰC THI CHẾ ĐỘ ---
   if (currentMode == MANUAL) {
     manual_logic();
