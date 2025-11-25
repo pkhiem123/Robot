@@ -37,11 +37,9 @@ int servo_pin = 10;
 int pos = 90; 
 
 // L298N 1: MOTOR BÁNH XE (M1)
-//Bánh trái
 #define ENA_WHEEL 3   // PWM
 #define IN1_WHEEL 9
 #define IN2_WHEEL 8
-//Bánh phải
 #define ENB_WHEEL 5   // PWM
 #define IN3_WHEEL 4
 #define IN4_WHEEL 2
