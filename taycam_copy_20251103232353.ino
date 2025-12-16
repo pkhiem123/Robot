@@ -26,7 +26,7 @@ byte vibrate = 0;
 // --- SIÊU ÂM ---
 #define TRIG_PIN 11
 #define ECHO_PIN 12
-#define MAX_DISTANCE 150
+#define MAX_DISTANCE 50
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 int distance = 100;
 
@@ -42,14 +42,14 @@ int pos = 90;
 #define PCF_IN3_R 2
 #define PCF_IN4_R 3
 
-#define MAX_SPEED 255
+#define MAX_SPEED 160
 #define FORWARD_SPEED MAX_SPEED
 #define TURN_SPEED 120
 
 //MOTOR TAY QUAY
-#define ENA_ARM_PWM 6
-#define PCF_IN1_ARM 4
-#define PCF_IN2_ARM 5
+#define ENB_ARM_PWM 6
+#define PCF_IN3_ARM 4
+#define PCF_IN4_ARM 5
 #define ARM_SPEED 255
 
 // --- LOGIC TỰ HÀNH ---
@@ -120,23 +120,23 @@ void turnLeft() {
 
 //Quay thuận
 void armSpinForward() {
-  analogWrite(ENA_ARM_PWM, ARM_SPEED);
-  pcf.write(PCF_IN1_ARM, HIGH);
-  pcf.write(PCF_IN2_ARM, LOW);
+  analogWrite(ENB_ARM_PWM, ARM_SPEED);
+  pcf.write(PCF_IN3_ARM, HIGH);
+  pcf.write(PCF_IN4_ARM, LOW);
 }
 
 //Quay ngược
 void armSpinBackward() {
-  analogWrite(ENA_ARM_PWM, ARM_SPEED);
-  pcf.write(PCF_IN1_ARM, LOW);
-  pcf.write(PCF_IN2_ARM, HIGH);
+  analogWrite(ENB_ARM_PWM, ARM_SPEED);
+  pcf.write(PCF_IN3_ARM, LOW);
+  pcf.write(PCF_IN4_ARM, HIGH);
 }
 
 // Dừng tay quay
 void armStop() {
-  analogWrite(ENA_ARM_PWM, 0);
-  pcf.write(PCF_IN1_ARM, LOW);
-  pcf.write(PCF_IN2_ARM, LOW);
+  analogWrite(ENB_ARM_PWM, 0);
+  pcf.write(PCF_IN3_ARM, LOW);
+  pcf.write(PCF_IN4_ARM, LOW);
 }
 //LOGIC TỰ HÀNH 
 void autonomous_logic() {
@@ -150,7 +150,6 @@ void autonomous_logic() {
       distance = sonar.ping_cm();
       Serial.print("Khoảng cách: ");
       Serial.println(distance);
-      // Lọc nhiễu: chỉ dừng nếu khoảng cách hợp lệ > 0 và < 20
       if (distance > 0 && distance <= 25) {
         moveStop();
         autoStateMillis = currentMillis;
@@ -160,7 +159,7 @@ void autonomous_logic() {
 
     case AUTO_REVERSE:
       moveBackward();
-      if (currentMillis - autoStateMillis > 400) {  // Lùi lâu hơn chút
+      if (currentMillis - autoStateMillis > 800) {  // Lùi lâu hơn chút
         moveStop();
         autoStateMillis = currentMillis;
         currentAutoState = AUTO_LOOK_LEFT;
@@ -236,7 +235,7 @@ void manual_logic() {
   if (ps2x.Button(PSB_R2)) {
     armSpinForward();  // Quay thuận
   } else if (ps2x.Button(PSB_L2)) {
-    armSpinBackward();  // Quay ngược
+    armSpinBackward();  
   } else {
     armStop();
   }
@@ -245,7 +244,7 @@ void manual_logic() {
 //SETUP & LOOP 
 void setup() {
   Serial.begin(115200);
-  Wire.begin();  // Khởi động I2C
+  Wire.begin();
 
   // 1. Cài đặt PCF8574
   Serial.print("Đang khởi tạo PCF8574");
@@ -274,7 +273,7 @@ void setup() {
   // 3. Cài đặt PWM Pins (L298N)
   pinMode(ENA_WHEEL_PWM, OUTPUT);
   pinMode(ENB_WHEEL_PWM, OUTPUT);
-  pinMode(ENA_ARM_PWM, OUTPUT);
+  pinMode(ENB_ARM_PWM, OUTPUT);
 
   // 4. Cài đặt Servo
   myservo.attach(servo_pin);
@@ -284,7 +283,7 @@ void setup() {
 }
 
 void loop() {
-  ps2x.read_gamepad();
+  ps2x.read_gamepad(false, vibrate);
 
   // CHUYỂN CHẾ ĐỘ (Nút SELECT)
   if (ps2x.ButtonPressed(PSB_SELECT)) {
@@ -308,5 +307,5 @@ void loop() {
     autonomous_logic();
   }
 
-  delay(50);
+  delay(10);
 }
